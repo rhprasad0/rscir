@@ -1,7 +1,8 @@
 checkpoints/
 __pycache__/
-patterncom/
+PatterNet/
 results/
 models/
 metrics.csv
 *.csv
+.vscode/launch.json
