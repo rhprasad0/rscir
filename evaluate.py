@@ -12,6 +12,11 @@ from tqdm import tqdm
 
 from utils import *
 
+MODEL_NAME = "clip"
+DATASET_PATH = "/home/ryan/rscir/PatterNet"
+METHODS = ["Weighted Similarities Norm"]
+LAMBDAS = [0.5]
+
 
 # Function to read features from a pickle file
 def read_dataset_features(pickle_dir):
@@ -140,51 +145,56 @@ if __name__=="__main__":
     args = parser.parse_args()
 
     # Convert lambdas argument to a list of floats
-    lambdas = list(map(float, args.lambdas.split(',')))
+    # lambdas = list(map(float, args.lambdas.split(',')))
     # For lambda ablation, uncomment the line:
     # lambdas = [x/10 for x in range(0, 11, 1)]
+    lambdas = LAMBDAS
 
     # Load model and tokenizer
-    model, _, tokenizer = load_model(args.model_name, args.model_type)
+    model, _, tokenizer = load_model(MODEL_NAME, args.model_type)
 
     # Read features from the specified dataset
     if args.dataset == 'patternnet':
         print('Reading features...')
-        features, labels, paths = read_dataset_features(os.path.join(args.dataset_path, 'features', f'patternnet_{args.model_name}.pkl'))
+        features, labels, paths = read_dataset_features(os.path.join(DATASET_PATH, 'features', f'patternnet_{MODEL_NAME}.pkl'))
         print('Features are loaded!')
         at = [5, 10, 15, 20]
 
     # Initialize metrics storage
-    metrics_final = create_metrics_final(at, args.methods)
+    metrics_final = create_metrics_final(at, METHODS)
 
     if args.dataset == 'patternnet':
         for lam in lambdas:
             for attribute in args.attributes:
-                metrics_final = create_metrics_final(at, args.methods)
+                metrics_final = create_metrics_final(at, METHODS)
                 start = time.time()
                 
                 # Read query data from CSV file
-                query_filenames, attributes, attribute_values = read_csv(os.path.join(args.dataset_path, 'PatternCom', f'{attribute}.csv'))
+                query_filenames, attributes, attribute_values = read_csv(os.path.join(DATASET_PATH, 'PatternCom', f'{attribute}.csv'))
                 query_labels = [re.split(r'\d', path)[0] for path in query_filenames] # or something like labels[relative_indices], should give the same
                 
                 # Fix query attribute labels
                 query_attributelabels = [x + query_labels[ii] for ii, x in enumerate(attributes)]
                 query_attributelabels = fix_query_attributelabels(attribute, query_attributelabels)
 
-                # Pair attribute labels with attribute values
+                # Pair attribute labels with attribute values | 0000 = ('colortenniscourt', 'blue')...
                 paired = list(zip(query_attributelabels, attribute_values))
 
                 # Create prompts based on paired data
-                prompts = create_prompts(paired)
-                relative_indices = find_relative_indices(query_filenames, paths)
-                filename_to_index_map = {filename: i for i, filename in enumerate(query_filenames)}
+                prompts = create_prompts(paired) # 0000 = ['brown', 'green', 'gray', 'red']
+                relative_indices = find_relative_indices(query_filenames, paths) # 0000 = 1106
+                filename_to_index_map = {filename: i for i, filename in enumerate(query_filenames)} # 'tenniscourt723.jpg' = 0
+                index_to_filename_map = filename_to_index_map = {i: filename for i, filename in enumerate(query_filenames)} # 0 = 'tenniscourt723.jpg'
 
                 # Cache text features
                 text_feature_cache = {}
                 for i, idx in enumerate(tqdm(relative_indices, desc="Processing queries")):
                     query_feature = features[idx]
+
                     query_class = query_labels[i]  # Get the original class of the query image
+
                     for prompt in tqdm(prompts[i], desc="Processing prompts", leave=False):
+
                         # Check if the text feature for this prompt is already computed
                         if prompt not in text_feature_cache:
                             # If not, compute and cache it
@@ -195,29 +205,11 @@ if __name__=="__main__":
                         else:
                             # If already computed, retrieve from cache
                             text_feature = text_feature_cache[prompt]
-                        for method in args.methods:
+
+
+                        for method in METHODS:
+                            print(f"Querying image: {index_to_filename_map[i]} | Querying text: {prompt}\n")
                             rankings = calculate_rankings(method, query_feature, text_feature, features, lam)
-                            temp_metrics = metrics_calc(rankings, prompt, paths, filename_to_index_map, attribute_values, at, query_class, query_labels)
-
-                            # Accumulate metrics for each method
-                            for k in at:
-                                metrics_final[method][f"R@{k}"].append(temp_metrics[f"R@{k}"])
-                                metrics_final[method][f"P@{k}"].append(temp_metrics[f"P@{k}"])
-                            metrics_final[method]["AP"].append(temp_metrics["AP"])
-
-                # Calculate average metrics
-                for method in metrics_final:
-                    for metric in metrics_final[method]:
-                        metrics_final[method][metric] = round(sum(metrics_final[method][metric]) / len(metrics_final[method][metric]) if metrics_final[method][metric] else 0, 2)
-
-                print(metrics_final)
-                end = time.time()
-                timer(start, end)
-
-                # Save metrics to CSV file
-                print('Writing results to CSV file...')
-                results_dir = 'results'
-                if not os.path.exists(results_dir):
-                    os.makedirs(results_dir)
-                results_file_path = os.path.join(results_dir, f'{args.dataset}_metrics_{args.model_name}_lambda{lam}_{attribute}.csv')
-                dict_to_csv(metrics_final, results_file_path)
+                            best_match = os.path.basename(paths[rankings[0].item()])
+                            print(f"Best match: {best_match}")
+                            print()
