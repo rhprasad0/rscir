@@ -54,10 +54,10 @@ print()
 
 # enable extension
 conn = psycopg.connect(
-    host="pgvector.com40arouubf.us-west-2.rds.amazonaws.com",
-    user="postgres",
-    password="fReQ8oLT&qO82qRa",
-    dbname="postgres",
+    host="",
+    user="",
+    password="",
+    dbname="",
     port=5432,
     autocommit=True,
 )
