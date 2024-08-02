@@ -3,7 +3,7 @@ from pgvector.psycopg import register_vector
 import psycopg
 
 
-MODEL_NAME = "clip"
+MODEL_NAME = "remoteclip"
 
 words = [
     "blue",
@@ -54,10 +54,10 @@ print()
 
 # enable extension
 conn = psycopg.connect(
-    host="",
-    user="",
-    password="",
-    dbname="",
+    host="pgvector.com40arouubf.us-west-2.rds.amazonaws.com",
+    user="postgres",
+    password="fReQ8oLT&qO82qRa",
+    dbname="postgres",
     port=5432,
     autocommit=True,
 )
