@@ -31,27 +31,30 @@ class PatternNet(Dataset):
         if self.root is not None:
             img_path = os.path.join(self.root, str(self.images[idx]))
             url_path = f"https://ryans-website-thing-public.s3.us-west-2.amazonaws.com/PatterNet{str(self.images[idx])[1:]}"
+            filename = os.path.basename(img_path)
         else:
             img_path = str(self.images[idx])
         image = self.image_transforms(Image.open(img_path).convert("RGB"))
         label = self.labels[idx]
-        return image, label, url_path
+        return image, label, url_path, filename
 
 def save_dataset(model, dataloader, path_save):
     all_image_features, all_labels, all_image_paths = [], [], []
     embedding_tuples = []
+    all_image_filenames = []
     with torch.no_grad():
-        for images, labels, url_path in tqdm(dataloader, desc="Processing batches"):
+        for images, labels, url_path, filename in tqdm(dataloader, desc="Processing batches"):
             images = images.cuda(non_blocking=True)
             image_features = model.encode_image(images)           
             image_features = image_features / image_features.norm(dim=-1, keepdim=True) 
             all_image_features.append(image_features)
             all_labels.extend(labels)
             all_image_paths.extend(url_path)
+            all_image_filenames.extend(filename)
         
-        all_image_features = torch.cat(all_image_features, dim=0).data.cpu().numpy()
+        all_image_features = torch.cat(all_image_features, dim=0).data.cpu().tolist()
 
-        embedding_tuples.extend(zip(all_image_paths, image_features))
+        embedding_tuples.extend(zip(all_image_filenames, all_image_paths, all_image_features))
         print("embedding tuples made!")
 
         # dict_save = {
@@ -60,12 +63,12 @@ def save_dataset(model, dataloader, path_save):
         #     'paths': all_image_paths
         # }
 
-        # directory = os.path.dirname(path_save)
-        # if not os.path.exists(directory):
-        #     os.makedirs(directory)
-        # with open(path_save, "wb") as f:
-        #     print('Writing pickle file...')
-        #     pickle.dump(dict_save, f)
+        directory = os.path.dirname(path_save)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        with open(path_save, "wb") as f:
+            print('Writing pickle file...')
+            pickle.dump(embedding_tuples, f)
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Extracting features from the model and saving them into pickle files.')
@@ -86,5 +89,5 @@ if __name__=="__main__":
         full_dataset = PatternNet(full_dataset_path, image_transforms=preprocess_images, root=DATASET_PATH)
         full_dataloader = DataLoader(full_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8, pin_memory=True, drop_last=False)
         
-        save_path = os.path.join(DATASET_PATH, 'features', f'patternnet_{MODEL_NAME}.pkl')
+        save_path = os.path.join(DATASET_PATH, 'features', f'patternnet_{MODEL_NAME}_tuples.pkl')
         save_dataset(model, full_dataloader, save_path)
