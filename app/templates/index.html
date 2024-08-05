@@ -5,7 +5,6 @@
     {% for result in search_results %}
         <div>
             <h3>Word query: {{ result[0] }}</h3>
-            <h4>Similarity score: {{ result[2] }}</h4>
             <img src="{{ result[1] }}">
         </div>
     {% endfor %}

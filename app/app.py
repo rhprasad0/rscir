@@ -41,20 +41,14 @@ def composite_search():
                     with zomg_query as (
                         with image_query as (
                             with img_mean as (
-                                with image_query as (
-                                    select embedding from rscir_images ri where ri.filename = '{query_img_filename}'
-                                )
                                 select avg(
-                                    (embedding <#> (select * from image_query)) * -1 
+                                    (embedding <#> '{img_query}') * -1 
                                 )
                                 from rscir_images
                             ),
                             img_std as (
-                                with image_query as (
-                                    select embedding from rscir_images ri where ri.filename = '{query_img_filename}'
-                                )
                                 select stddev(
-                                    (embedding <#> (select * from image_query)) * -1 
+                                    (embedding <#> '{img_query}') * -1 
                                 )
                                 from rscir_images
                             ),
@@ -63,7 +57,7 @@ def composite_search():
                                     select embedding from rscir_images ri where ri.filename = '{query_img_filename}'
                                 )
                                 select *, (
-                                    (embedding <#> (select * from image_query)) * -1 
+                                    (embedding <#> '{img_query}') * -1 
                                 ) as img_similarity
                                 from rscir_images ri order by img_similarity desc
                             )

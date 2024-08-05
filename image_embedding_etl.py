@@ -15,7 +15,7 @@ conn = psycopg.connect(
     password="",
     dbname="",
     port=5432,
-    autocommit=True,
+    autocommit=True
 )
 
 

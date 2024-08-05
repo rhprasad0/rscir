@@ -5,8 +5,16 @@
     <title>Remote Sensing Composite Image Search</title>
 </head>
 <body>
-    <div class="content">
-        <h2><b>Image Query:</b></h2>
+    <div>
+        This is my implementation of the image + text search algorithm described in Psomas et al's paper.<br>
+        Please check out their fantastic work <a href="https://github.com/billpsomas/rscir">here</a>.<br>
+        This implementation uses image embeddings from the PatterNet dataset thrown at the large RemoteCLIP model.<br>
+        The composite approach in the paper had the highest accuracy with lambda=0.6, which is what is implemented here.<br>
+        <br><br>
+        Please refresh the page for a new random image query.
+    </div>
+    <div>
+        <h2><b>Image query:</b></h2>
         <img src="{{ query_img }}">
         <br><br>
         {% block content %} {% endblock %}
